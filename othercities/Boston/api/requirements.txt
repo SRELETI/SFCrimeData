@@ -1,0 +1,10 @@
+ibm_db==2.0.6 #Library to connect to IBM Db's.
+Bottle==0.12.9 #Bottle web server
+simplejson==3.8.2 # to deal with json format
+python-swiftclient==3.0.0 # Library to connect to the Object Data Store
+certifi==2016.2.28 # Library to authenticate Object Data Store
+keystoneauth1==2.3.0 # Library to authenticate Object Data Store
+pyOpenSSL==0.13.1 # Library used while authenticating Object Data Store
+python-keystoneclient==2.3.1 # Library to authenticate Object Data Store
+python-novaclient==3.3.0 # Library to authenticate Object Data Store
+six==1.10.0 #Library to authenticate Object Data Store

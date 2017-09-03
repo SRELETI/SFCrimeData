@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<!-- 
+
+*************************************************************
+This page display the crime heat map of San Francisco region.
+
+The San Francisco crime Data and SF Police Districts geo coordinates data are obtained from the SF open data website.
+
+https://data.sfgov.org/data?category=Public%20Safety
+
+*************************************************************
+-->
+
+<html>
+  <head>
+    <title>NGP Demo Application</title>
+    <meta charset="utf-8">
+    <meta http-equi
+	v="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="stylesheets/style.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+  </head>
+
+  <body>
+   <div id="map"></div>
+   	
+    <script>
+   // Global Variables 
+   var crimeData; // holds the crime data of all SF districts
+   var infoWindow; // holds reference to infowindow drawn on google maps for each district
+   var totalCrimes; // holds the total count of all the crimes in SF
+   // This function loads a map with SF as the center and with a zoom level of 12.
+   function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 12,
+        center: {"lat": 37.7749300, "lng": -122.4194200},
+        mapTypeId: google.maps.MapTypeId.TERRAIN
+        });
+	}
+   // This function contains a jQuery ajax call which will make a request call to our api and gets the SF crime data and geo coordinates in JSON format 	 
+   function makeRestCall() {  
+		return $.ajax({
+			type:"GET",
+			url:'http://api-ngp.mybluemix.net/heatmap',
+			dataType:"json",
+			crossDomain: true
+		});
+	}
+   // This function will call the function which will process the crime data nd display it on google maps. This function is called after the jQuery ajax is completed.
+   function processData_init(data) {
+		processData(data,map);
+	}
+   // This function will process the crime data and display on google maps. 
+   function processData(data,map) {
+		crimeData = data.data; // Reads the "data" key from the json returned by the api. The "data" key contains the json array which contains the data for all the districts
+		crimeData = crimeData.sort(function(a,b) { // Sort the SF districts crime data based on the number of crimes in each district
+			return b.count - a.count;
+		});
+		var colors = ['#C00005','#EA0006','#FF4532','#FF9284','#FFD2CD','#FFE774','#CDF97E','#6FF04D','#00BC46','#006C28'] // Appropriate colors for each district based on number of crimes
+		totalCrimes = 0; // Total crimes initial count
+		var polygons = []; // array holding references to polygons drawn on google maps for each district
+		var contentString = []; // array holding content for infowindows on each polygon. 
+		for(j=0;j<crimeData.length;j++) { // Iterate over the crime records for each district
+			totalCrimes = totalCrimes + crimeData[j].count; // update the total crime count.
+			if(crimeData[j].PdDistrict == 'SOUTHERN') { // Southern police district contains two disconnected regions. So, if the stroke value is set, then a line is drawn betwen this two disconnected regions. This conditional statement is used for avoiding it.
+				polygons[j] = drawPolygon(crimeData[j].the_geom,colors[j],0); // drawPolygon function takes the geo coordinates, color and stroke weight as input parameters and returns the polygon.
+				polygons[j].setMap(map); // Polygon is drawn on the map.
+			}
+			else {
+				polygons[j] = drawPolygon(crimeData[j].the_geom,colors[j],2); // Polygon is drawn with stroke weight as 2
+				polygons[j].setMap(map); // Polygon is drawn on the map
+			}
+					
+		}
+		infoWindow = new google.maps.InfoWindow( { // Info window with a max width of 150 is created. Infowindow is a popup windown which appears when we click on google maps
+			maxWidth: 150
+		});
+		// Content on InfoWindow for each district is constructed. 
+		for(i=0;i<crimeData.length;i++) {		
+			// The content in info window can be html code. So, I have used html and inline css to style the info window. 
+			var contentString = '<div id="head" style="font-family: monospace, sans-serif; font-size: 15px;font-weight: 400;padding: 0.5px 2px 0.5px 2px;background-color: #48b5e9;color: white;margin: 1px;border-radius: 2px 2px 0 0;text-align:center;"><h4>'+crimeData[i].PdDistrict+' Police District</h4></div>'+
+						'<p style="color:black;font-size:10px;">Total Number of Crimes Committed in this region since 2003: <b>'+crimeData[i].count+'</b></p>'+
+					'<p style="color:black;font-size:10px;">Thats, <b>'+((crimeData[i].count/totalCrimes)*100).toFixed(2)+' %</b> of total Crimes Committed in San Franscisco </p>';
+			polygons[i].set("Info",contentString); // Polygon has methods to store extra information associated with it. Content stored with each polygon is then associated with each info window. 
+			polygons[i].addListener('click',showInfoWin); // Add a click listener on each polygon which will call a function that will associate the content with each infowindow and display the infowindow.
+		}
+			
+	}
+	// This function displays the infowindow on the maps. 
+	function showInfoWin(event) {
+		infoWindow.close();
+		infoWindow.setContent(this.get("Info"));
+		infoWindow.setPosition(event.latLng);
+		infoWindow.open(map);
+	}
+	//done is a jQuery method which gets called when the ajax request is completed. the done method is calling processData_init function.
+	makeRestCall().done(processData_init);
+
+    // Construct the polygon.
+	function drawPolygon(coord,color,stroke) {
+		return  new google.maps.Polygon({
+            paths: coord, // google maps will use this co-ords to draw the boundaries for each polygon.
+ 			strokeColor: color, // Color of the borders.
+			strokeOpacity: 0.8, // opacity of the border
+			strokeWeight: stroke, // size of the border
+			fillColor: color, // color of the region.
+			fillOpacity: 0.6 // opacity of the region.
+		});
+	}
+    </script>
+	
+    <script async defer
+    	src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBJObFzEMnvyUn9_kz87NsAtWcoc4UmMck&callback=initMap"> // calls the initMap function.
+    </script>
+  </body>
+</html>
